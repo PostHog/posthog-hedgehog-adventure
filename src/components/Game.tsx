@@ -1,52 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { usePostHog } from 'posthog-js/react'
-import { EventBus } from '@/game/EventBus'
 import type Phaser from 'phaser'
 
-interface GameProps {
-  flags: {
-    doubleJump: boolean
-    skin: string
-    speedBoost: boolean
-  }
-  onEvent: (event: string, properties: Record<string, unknown>) => void
-}
-
-export function Game({ flags, onEvent }: GameProps) {
+export function Game() {
   const gameRef = useRef<Phaser.Game | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const posthog = usePostHog()
-  const initialFlagsRef = useRef(flags)
-
-  useEffect(() => {
-    if (gameRef.current) {
-      gameRef.current.registry.set('doubleJumpEnabled', flags.doubleJump)
-      gameRef.current.registry.set('speedBoostEnabled', flags.speedBoost)
-      gameRef.current.registry.set('skin', flags.skin)
-    }
-  }, [flags])
-
-  useEffect(() => {
-    const handlePostHogEvent = ({
-      event,
-      properties,
-    }: {
-      event: string
-      properties: Record<string, unknown>
-    }) => {
-      posthog?.capture(event, properties)
-      onEvent(event, properties)
-    }
-
-    EventBus.on('posthog-event', handlePostHogEvent)
-
-    return () => {
-      EventBus.off('posthog-event', handlePostHogEvent)
-    }
-  }, [posthog, onEvent])
 
   useEffect(() => {
     if (typeof window === 'undefined' || !containerRef.current) return
@@ -58,13 +18,7 @@ export function Game({ flags, onEvent }: GameProps) {
         gameRef.current.destroy(true)
       }
 
-      const initFlags = initialFlagsRef.current
-      gameRef.current = createGame('game-container', {
-        doubleJumpEnabled: initFlags.doubleJump,
-        speedBoostEnabled: initFlags.speedBoost,
-        skin: initFlags.skin,
-      })
-
+      gameRef.current = createGame('game-container')
       setIsLoading(false)
     }
 

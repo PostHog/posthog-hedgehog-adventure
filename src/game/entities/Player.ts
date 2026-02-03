@@ -1,18 +1,14 @@
 import Phaser from 'phaser'
-import { EventBus } from '../EventBus'
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys
   private jumpCount = 0
-  private maxJumps = 1
-  private baseSpeed = 200
-  private currentSkin = 'default'
+  private maxJumps = 2
+  private speed = 300
   private isOnGround = false
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
-    const skin = scene.game.registry.get('skin') || 'default'
-    super(scene, x, y, `${skin}-walk`, 0)
-    this.currentSkin = skin
+    super(scene, x, y, 'default-walk', 0)
 
     scene.add.existing(this)
     scene.physics.add.existing(this)
@@ -25,78 +21,56 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setOffset(15, 10)
 
     this.cursors = scene.input.keyboard!.createCursorKeys()
-
     this.createAnimations(scene)
-    this.updateFromFlags()
   }
 
   private createAnimations(scene: Phaser.Scene) {
-    const skins = ['default', 'spiderhog', 'robohog']
-
-    for (const skin of skins) {
-      if (!scene.anims.exists(`${skin}-walk`)) {
-        scene.anims.create({
-          key: `${skin}-walk`,
-          frames: scene.anims.generateFrameNumbers(`${skin}-walk`, {
-            start: 0,
-            end: 10,
-          }),
-          frameRate: 15,
-          repeat: -1,
-        })
-      }
-
-      if (!scene.anims.exists(`${skin}-jump`)) {
-        scene.anims.create({
-          key: `${skin}-jump`,
-          frames: scene.anims.generateFrameNumbers(`${skin}-jump`, {
-            start: 0,
-            end: 9,
-          }),
-          frameRate: 15,
-          repeat: 0,
-        })
-      }
-
-      if (!scene.anims.exists(`${skin}-fall`)) {
-        scene.anims.create({
-          key: `${skin}-fall`,
-          frames: scene.anims.generateFrameNumbers(`${skin}-fall`, {
-            start: 0,
-            end: 8,
-          }),
-          frameRate: 15,
-          repeat: -1,
-        })
-      }
-
-      if (!scene.anims.exists(`${skin}-idle`)) {
-        scene.anims.create({
-          key: `${skin}-idle`,
-          frames: [{ key: `${skin}-walk`, frame: 0 }],
-          frameRate: 1,
-        })
-      }
+    if (!scene.anims.exists('default-walk')) {
+      scene.anims.create({
+        key: 'default-walk',
+        frames: scene.anims.generateFrameNumbers('default-walk', {
+          start: 0,
+          end: 10,
+        }),
+        frameRate: 15,
+        repeat: -1,
+      })
     }
-  }
 
-  updateFromFlags() {
-    const doubleJump = this.scene.game.registry.get('doubleJumpEnabled')
-    const speedBoost = this.scene.game.registry.get('speedBoostEnabled')
-    const newSkin = this.scene.game.registry.get('skin') || 'default'
+    if (!scene.anims.exists('default-jump')) {
+      scene.anims.create({
+        key: 'default-jump',
+        frames: scene.anims.generateFrameNumbers('default-jump', {
+          start: 0,
+          end: 9,
+        }),
+        frameRate: 15,
+        repeat: 0,
+      })
+    }
 
-    this.maxJumps = doubleJump ? 2 : 1
-    this.baseSpeed = speedBoost ? 300 : 200
+    if (!scene.anims.exists('default-fall')) {
+      scene.anims.create({
+        key: 'default-fall',
+        frames: scene.anims.generateFrameNumbers('default-fall', {
+          start: 0,
+          end: 8,
+        }),
+        frameRate: 15,
+        repeat: -1,
+      })
+    }
 
-    if (newSkin !== this.currentSkin) {
-      this.currentSkin = newSkin
-      const currentAnim = this.anims.currentAnim?.key?.split('-')[1] || 'idle'
-      this.play(`${this.currentSkin}-${currentAnim}`)
+    if (!scene.anims.exists('default-idle')) {
+      scene.anims.create({
+        key: 'default-idle',
+        frames: [{ key: 'default-walk', frame: 0 }],
+        frameRate: 1,
+      })
     }
   }
 
   update() {
-    this.updateFromFlags()
     const body = this.body as Phaser.Physics.Arcade.Body
     this.isOnGround = body.blocked.down || body.touching.down
 
@@ -104,24 +78,22 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.jumpCount = 0
     }
 
-    const speed = this.baseSpeed
-
     if (this.cursors.left.isDown) {
-      this.setVelocityX(-speed)
+      this.setVelocityX(-this.speed)
       this.setFlipX(true)
       if (this.isOnGround) {
-        this.play(`${this.currentSkin}-walk`, true)
+        this.play('default-walk', true)
       }
     } else if (this.cursors.right.isDown) {
-      this.setVelocityX(speed)
+      this.setVelocityX(this.speed)
       this.setFlipX(false)
       if (this.isOnGround) {
-        this.play(`${this.currentSkin}-walk`, true)
+        this.play('default-walk', true)
       }
     } else {
       this.setVelocityX(0)
       if (this.isOnGround) {
-        this.play(`${this.currentSkin}-idle`, true)
+        this.play('default-idle', true)
       }
     }
 
@@ -131,9 +103,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     if (!this.isOnGround) {
       if (body.velocity.y < 0) {
-        this.play(`${this.currentSkin}-jump`, true)
+        this.play('default-jump', true)
       } else {
-        this.play(`${this.currentSkin}-fall`, true)
+        this.play('default-fall', true)
       }
     }
   }
@@ -142,25 +114,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.jumpCount < this.maxJumps) {
       this.setVelocityY(-450)
       this.jumpCount++
-
-      EventBus.emit('posthog-event', {
-        event: 'player_jumped',
-        properties: {
-          jumpNumber: this.jumpCount,
-          isDoubleJump: this.jumpCount > 1,
-          skin: this.currentSkin,
-        },
-      })
     }
-  }
-
-  die(cause: string) {
-    EventBus.emit('posthog-event', {
-      event: 'player_died',
-      properties: {
-        cause,
-        skin: this.currentSkin,
-      },
-    })
   }
 }
