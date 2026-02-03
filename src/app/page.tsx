@@ -1,141 +1,97 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
-import { FlagPanel } from '@/components/FlagPanel'
-import { EventsPanel } from '@/components/EventsPanel'
 
 const Game = dynamic(() => import('@/components/Game').then((m) => m.Game), {
   ssr: false,
   loading: () => (
     <div
-      className="flex items-center justify-center bg-blue-900 rounded-lg"
-      style={{ width: 800, height: 600 }}
+      className="flex items-center justify-center rounded-lg"
+      style={{ width: 800, height: 600, backgroundColor: '#1d4aff' }}
     >
-      <div className="text-white text-xl">Loading game...</div>
+      <div className="text-white text-xl font-medium">waking up the hedgehog...</div>
     </div>
   ),
 })
 
-interface GameEvent {
-  id: string
-  event: string
-  properties: Record<string, unknown>
-  timestamp: Date
-}
-
 export default function Home() {
-  const [flags, setFlags] = useState({
-    doubleJump: false,
-    skin: 'default',
-    speedBoost: false,
-  })
-  const [events, setEvents] = useState<GameEvent[]>([])
-  const [isLoaded, setIsLoaded] = useState(false)
-
-  useEffect(() => {
-    async function loadFlags() {
-      try {
-        const res = await fetch('/api/flags')
-        const data = await res.json()
-
-        setFlags({
-          doubleJump: data.featureFlags['game-double-jump'] ?? false,
-          skin: data.featureFlags['game-character-skin'] ?? 'default',
-          speedBoost: data.featureFlags['game-speed-boost'] ?? false,
-        })
-      } catch (error) {
-        console.error('Failed to load flags:', error)
-      }
-      setIsLoaded(true)
-    }
-
-    loadFlags()
-  }, [])
-
-  const handleEvent = useCallback(
-    (event: string, properties: Record<string, unknown>) => {
-      setEvents((prev) => [
-        ...prev.slice(-49),
-        {
-          id: `${Date.now()}-${Math.random()}`,
-          event,
-          properties,
-          timestamp: new Date(),
-        },
-      ])
-    },
-    []
-  )
-
-  const handleFlagChange = useCallback(
-    (newFlags: { doubleJump: boolean; skin: string; speedBoost: boolean }) => {
-      setFlags(newFlags)
-    },
-    []
-  )
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-white text-xl">Loading...</div>
-      </div>
-    )
-  }
-
   return (
-    <div className="min-h-screen bg-gray-950 p-8">
-      <header className="max-w-6xl mx-auto mb-6">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-          <span className="text-4xl">🦔</span>
-          PostHog Hedgehog Adventure
+    <div className="min-h-screen p-8" style={{ backgroundColor: '#EEEFE9' }}>
+      <header className="max-w-4xl mx-auto mb-6">
+        <h1
+          className="text-4xl font-bold flex items-center gap-3"
+          style={{ color: '#1E2F46' }}
+        >
+          hedgehog adventure
         </h1>
-        <p className="text-gray-400 mt-2">
-          A feature flag demo game - toggle flags to change gameplay in
-          real-time!
+        <p className="mt-2 text-lg" style={{ color: '#5A6577' }}>
+          help max collect data points. use arrow keys to move, up to jump.
+          <br />
+          <span className="text-sm opacity-75">
+            tl;dr - it&apos;s a platformer. you got this.
+          </span>
         </p>
       </header>
 
-      <main className="max-w-6xl mx-auto flex gap-6">
-        <div className="flex-shrink-0">
-          <Game flags={flags} onEvent={handleEvent} />
+      <main className="max-w-4xl mx-auto">
+        <div
+          className="rounded-lg overflow-hidden"
+          style={{
+            boxShadow: '0 4px 0 rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1)',
+          }}
+        >
+          <Game />
         </div>
 
-        <div className="flex-1 space-y-4 min-w-[280px]">
-          <FlagPanel flags={flags} onFlagChange={handleFlagChange} />
-          <EventsPanel events={events} />
+        <div
+          className="mt-4 p-4 rounded-lg"
+          style={{ backgroundColor: '#fff', border: '1px solid #E5E7EB' }}
+        >
+          <div className="flex items-center gap-6 text-sm" style={{ color: '#5A6577' }}>
+            <div className="flex items-center gap-2">
+              <span
+                className="px-2 py-1 rounded font-mono text-xs"
+                style={{ backgroundColor: '#F3F4F6' }}
+              >
+                ←→
+              </span>
+              <span>move</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="px-2 py-1 rounded font-mono text-xs"
+                style={{ backgroundColor: '#F3F4F6' }}
+              >
+                ↑
+              </span>
+              <span>jump</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="px-2 py-1 rounded font-mono text-xs"
+                style={{ backgroundColor: '#F3F4F6' }}
+              >
+                space
+              </span>
+              <span>restart</span>
+            </div>
+          </div>
         </div>
       </main>
 
-      <footer className="max-w-6xl mx-auto mt-8 text-center text-gray-500 text-sm">
+      <footer className="max-w-4xl mx-auto mt-12 text-center text-sm" style={{ color: '#9CA3AF' }}>
         <p>
-          Built with{' '}
-          <a
-            href="https://nextjs.org"
-            className="text-blue-400 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Next.js
-          </a>
-          ,{' '}
+          made with{' '}
           <a
             href="https://phaser.io"
-            className="text-blue-400 hover:underline"
+            className="hover:underline"
+            style={{ color: '#f75a00' }}
             target="_blank"
             rel="noopener noreferrer"
           >
-            Phaser
+            phaser
           </a>
-          , and{' '}
-          <a
-            href="https://posthog.com"
-            className="text-blue-400 hover:underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            PostHog
-          </a>
+          {' '}and questionable platforming skills
         </p>
       </footer>
     </div>

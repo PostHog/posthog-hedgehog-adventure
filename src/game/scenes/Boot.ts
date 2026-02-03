@@ -6,39 +6,24 @@ export class Boot extends Phaser.Scene {
   }
 
   preload() {
-    const skin = this.game.registry.get('skin') || 'default'
-    this.loadSkinSprites(skin)
-
-    if (skin !== 'default') {
-      this.loadSkinSprites('default')
-    }
-    if (skin !== 'spiderhog') {
-      this.loadSkinSprites('spiderhog')
-    }
-    if (skin !== 'robohog') {
-      this.loadSkinSprites('robohog')
-    }
-
-    this.load.image('star-hog', '/assets/collectibles/star-hog.png')
-  }
-
-  loadSkinSprites(skinName: string) {
     const frameConfig = { frameWidth: 80, frameHeight: 80 }
     this.load.spritesheet(
-      `${skinName}-walk`,
-      `/assets/sprites/skins/${skinName}/walk.png`,
+      'default-walk',
+      '/assets/sprites/skins/default/walk.png',
       frameConfig
     )
     this.load.spritesheet(
-      `${skinName}-jump`,
-      `/assets/sprites/skins/${skinName}/jump.png`,
+      'default-jump',
+      '/assets/sprites/skins/default/jump.png',
       frameConfig
     )
     this.load.spritesheet(
-      `${skinName}-fall`,
-      `/assets/sprites/skins/${skinName}/fall.png`,
+      'default-fall',
+      '/assets/sprites/skins/default/fall.png',
       frameConfig
     )
+
+    this.load.image('data-point', '/assets/collectibles/posthog-icon.png')
   }
 
   create() {

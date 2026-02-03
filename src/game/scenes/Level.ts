@@ -1,6 +1,5 @@
 import Phaser from 'phaser'
 import { Player } from '../entities/Player'
-import { EventBus } from '../EventBus'
 
 export class Level extends Phaser.Scene {
   private player!: Player
@@ -19,7 +18,7 @@ export class Level extends Phaser.Scene {
     this.score = 0
     this.startTime = Date.now()
 
-    this.cameras.main.setBackgroundColor('#1d4ed8')
+    this.cameras.main.setBackgroundColor('#1d4aff')
 
     this.createBackground()
     this.createPlatforms()
@@ -27,38 +26,16 @@ export class Level extends Phaser.Scene {
     this.createPlayer()
     this.createUI()
     this.setupCollisions()
-
-    const skin = this.game.registry.get('skin') || 'default'
-    const doubleJump = this.game.registry.get('doubleJumpEnabled') || false
-    const speedBoost = this.game.registry.get('speedBoostEnabled') || false
-
-    EventBus.emit('posthog-event', {
-      event: 'game_started',
-      properties: {
-        skin,
-        doubleJumpEnabled: doubleJump,
-        speedBoostEnabled: speedBoost,
-        level: 1,
-      },
-    })
-
-    EventBus.emit('current-scene-ready', this)
   }
 
   private createBackground() {
     const graphics = this.add.graphics()
 
-    graphics.fillStyle(0x60a5fa, 0.3)
-    for (let i = 0; i < 5; i++) {
-      const y = 100 + i * 100
-      graphics.fillRect(0, y, this.scale.width, 2)
-    }
-
-    graphics.fillStyle(0xffffff, 0.1)
-    for (let i = 0; i < 20; i++) {
+    graphics.fillStyle(0xffffff, 0.05)
+    for (let i = 0; i < 15; i++) {
       const x = Phaser.Math.Between(50, this.scale.width - 50)
       const y = Phaser.Math.Between(50, this.scale.height - 100)
-      const size = Phaser.Math.Between(2, 6)
+      const size = Phaser.Math.Between(1, 3)
       graphics.fillCircle(x, y, size)
     }
   }
@@ -71,7 +48,7 @@ export class Level extends Phaser.Scene {
       this.scale.height - 20,
       this.scale.width,
       40,
-      0x22c55e
+      0x1e2f46
     )
     this.physics.add.existing(ground, true)
     this.platforms.add(ground)
@@ -86,7 +63,8 @@ export class Level extends Phaser.Scene {
     ]
 
     platformData.forEach(({ x, y, width }) => {
-      const platform = this.add.rectangle(x, y, width, 20, 0x16a34a)
+      const platform = this.add.rectangle(x, y, width, 16, 0xf75a00)
+      platform.setStrokeStyle(2, 0xffffff, 0.3)
       this.physics.add.existing(platform, true)
       this.platforms.add(platform)
     })
@@ -118,14 +96,15 @@ export class Level extends Phaser.Scene {
     this.totalDataPoints = allPositions.length
 
     allPositions.forEach(({ x, y }) => {
-      const dataPoint = this.add.circle(x, y, 15, 0xf59e0b)
+      const dataPoint = this.add.image(x, y, 'data-point')
+      dataPoint.setScale(0.18)
       this.physics.add.existing(dataPoint, true)
       this.dataPoints.add(dataPoint, true)
 
       this.tweens.add({
         targets: dataPoint,
-        scale: { from: 1, to: 1.2 },
-        duration: 500,
+        scale: { from: 0.18, to: 0.2 },
+        duration: 600,
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut',
@@ -139,26 +118,15 @@ export class Level extends Phaser.Scene {
 
   private createUI() {
     this.scoreText = this.add
-      .text(16, 16, 'Data Points: 0', {
-        fontSize: '24px',
+      .text(16, 16, '0 / 9', {
+        fontSize: '20px',
         color: '#ffffff',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 4,
+        fontFamily: 'system-ui, sans-serif',
+        fontStyle: 'bold',
       })
       .setScrollFactor(0)
       .setDepth(100)
-
-    this.add
-      .text(16, 50, 'Arrow keys to move, Up to jump', {
-        fontSize: '16px',
-        color: '#ffffff',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 2,
-      })
-      .setScrollFactor(0)
-      .setDepth(100)
+      .setAlpha(0.9)
   }
 
   private setupCollisions() {
@@ -179,19 +147,11 @@ export class Level extends Phaser.Scene {
       | Phaser.Types.Physics.Arcade.GameObjectWithBody
       | Phaser.Tilemaps.Tile
   ) {
-    const dp = dataPoint as Phaser.GameObjects.Arc
+    const dp = dataPoint as Phaser.GameObjects.Image
     dp.destroy()
 
     this.score++
-    this.scoreText.setText(`Data Points: ${this.score}`)
-
-    EventBus.emit('posthog-event', {
-      event: 'item_collected',
-      properties: {
-        item_type: 'data_point',
-        total: this.score,
-      },
-    })
+    this.scoreText.setText(`${this.score} / ${this.totalDataPoints}`)
 
     if (this.score >= this.totalDataPoints) {
       this.levelComplete()
@@ -201,37 +161,52 @@ export class Level extends Phaser.Scene {
   private levelComplete() {
     const timeSeconds = Math.floor((Date.now() - this.startTime) / 1000)
 
-    EventBus.emit('posthog-event', {
-      event: 'level_completed',
-      properties: {
-        level: 1,
-        time_seconds: timeSeconds,
-        score: this.score,
-        skin: this.game.registry.get('skin') || 'default',
-      },
-    })
+    const overlay = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      this.scale.width,
+      this.scale.height,
+      0x000000,
+      0.5
+    )
+    overlay.setDepth(150)
 
-    const winText = this.add
-      .text(
-        this.scale.width / 2,
-        this.scale.height / 2,
-        `Level Complete!\nTime: ${timeSeconds}s\nPress SPACE to restart`,
-        {
-          fontSize: '32px',
-          color: '#ffffff',
-          fontFamily: 'Arial',
-          align: 'center',
-          stroke: '#000000',
-          strokeThickness: 6,
-        }
-      )
-      .setOrigin(0.5)
-      .setDepth(200)
+    const container = this.add.container(this.scale.width / 2, this.scale.height / 2)
+    container.setDepth(200)
+
+    const bg = this.add.rectangle(0, 0, 300, 180, 0xffffff, 1)
+    bg.setStrokeStyle(0)
+
+    const title = this.add.text(0, -50, 'nice.', {
+      fontSize: '32px',
+      color: '#1E2F46',
+      fontFamily: 'system-ui, sans-serif',
+      fontStyle: 'bold',
+    })
+    title.setOrigin(0.5)
+
+    const time = this.add.text(0, 0, `${timeSeconds}s`, {
+      fontSize: '48px',
+      color: '#f75a00',
+      fontFamily: 'system-ui, sans-serif',
+      fontStyle: 'bold',
+    })
+    time.setOrigin(0.5)
+
+    const hint = this.add.text(0, 50, 'press space to go again', {
+      fontSize: '14px',
+      color: '#9CA3AF',
+      fontFamily: 'system-ui, sans-serif',
+    })
+    hint.setOrigin(0.5)
+
+    container.add([bg, title, time, hint])
 
     this.tweens.add({
-      targets: winText,
-      scale: { from: 0, to: 1 },
-      duration: 500,
+      targets: container,
+      scale: { from: 0.8, to: 1 },
+      alpha: { from: 0, to: 1 },
+      duration: 300,
       ease: 'Back.easeOut',
     })
 
@@ -245,7 +220,6 @@ export class Level extends Phaser.Scene {
       this.player.update()
 
       if (this.player.y > this.scale.height + 100) {
-        this.player.die('fall')
         this.player.setPosition(100, this.scale.height - 100)
         this.player.setVelocity(0, 0)
       }
