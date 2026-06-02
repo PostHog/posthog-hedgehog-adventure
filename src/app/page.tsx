@@ -1,20 +1,37 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import { useEffect, useState } from 'react'
+
+const GamePlaceholder = () => (
+  <div
+    className="flex items-center justify-center rounded-lg"
+    style={{ width: 800, height: 600, backgroundColor: '#1d4aff' }}
+  >
+    <div className="text-white text-xl font-medium">waking up the hedgehog...</div>
+  </div>
+)
 
 const Game = dynamic(() => import('@/components/Game').then((m) => m.Game), {
   ssr: false,
-  loading: () => (
-    <div
-      className="flex items-center justify-center rounded-lg"
-      style={{ width: 800, height: 600, backgroundColor: '#1d4aff' }}
-    >
-      <div className="text-white text-xl font-medium">waking up the hedgehog...</div>
-    </div>
-  ),
+  loading: GamePlaceholder,
 })
 
 export default function Home() {
+  // The game container is only mounted on the client after the first paint.
+  // The server (and the initial hydration pass) render a stable placeholder,
+  // so a third-party cookie-consent banner mutating the DOM before React
+  // hydrates can't cause a hydration mismatch (React #418) in this subtree,
+  // which is what was triggering the repeated remount-and-blank-canvas loop.
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    // Intentional synchronous flip: the server and the initial hydration pass
+    // must agree (both `false`), then we mount the game on the next render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true)
+  }, [])
+
   return (
     <div className="min-h-screen p-8" style={{ backgroundColor: '#EEEFE9' }}>
       <header className="max-w-4xl mx-auto mb-6">
@@ -40,7 +57,7 @@ export default function Home() {
             boxShadow: '0 4px 0 rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1)',
           }}
         >
-          <Game />
+          {mounted ? <Game /> : <GamePlaceholder />}
         </div>
 
         <div
